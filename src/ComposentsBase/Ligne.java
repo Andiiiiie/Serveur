@@ -1,5 +1,7 @@
 package ComposentsBase;
 
+import Diso.SelectErrors;
+
 import java.io.Serializable;
 import java.util.Vector;
 
@@ -39,6 +41,28 @@ public class Ligne implements Serializable {
             reps.getDonnees().add(ligne2.getDonnees().get(j));
         }
         return reps;
+    }
+
+    public boolean isOkay(Vector<Condition> conditions) throws SelectErrors {
+        for (int i=0;i<conditions.size();i++)
+        {
+            if (conditions.get(i).isOkey(this,this.getNomColonne().indexOf(conditions.get(i).getCollumnName()))==false)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void changer(Vector<Changement> changements)
+    {
+        for (int i=0;i<changements.size();i++)
+        {
+            System.out.println(changements.get(i).getColonne()+" colonneName");
+            int temp=this.getNomColonne().indexOf(changements.get(i).getColonne());
+            System.out.println(temp+" numero colonne");
+            this.getDonnees().set(temp,changements.get(i).getDonnee());
+        }
     }
 
 

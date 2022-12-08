@@ -20,132 +20,399 @@ public class Query implements Serializable {
     }
 
 
-    public void executeQuery(String requete) throws InsertErrors, GrammarError, SelectErrors, IOException {
+    public String reponseRequete(String requete) throws IOException, SelectErrors {
+        String reponse;
         String[] tab = requete.split(" ");
-        Vector<String> req = new Vector<>(List.of(tab));
-        int indice ;
-
-            if (requete.endsWith(";") == false) {
-                throw new InsertErrors("; oubliee");
-            }
-        if (req.indexOf("create") != -1) {
-            indice = req.indexOf("create") + 1;
-            String[] nomBase = req.get(indice).split(";");
-            this.getMyDataBase().addNewBase(new Base(nomBase[0]));
-            if (this.getBase() == null) {
-                this.setBase(this.getMyDataBase().getBases().get(0));
-            }
-        } else if (req.indexOf("use") != -1) {
-            indice = req.indexOf("use") + 1;
-            String[] nomBase = req.get(indice).split(";");
-            if (this.getMyDataBase().getBaseByName(nomBase[0]) == null) {
-                throw new GrammarError("Base innexistant dans la base de donnee");
-            } else {
-                this.setBase(this.getMyDataBase().getBaseByName(nomBase[0]));
-            }
-        }
-        else if(req.indexOf("afficher")!=-1)
+        Vector<String> request = new Vector<>(List.of(tab));
+        //creation base : create database
+        //choix base : use
+        //afficher les bases: show databases
+        //se connecter a la base : ...
+        //creer tableau :create table  ( col1,col2 )
+        //selection tableau
+        //insertion tableau
+        //afficher les tableau d'un base
+        if(request.indexOf("create")!=-1 && request.indexOf("database")==(request.indexOf("create")+1))
         {
-            indice=req.indexOf("afficher")+1;
-            String[] splitiavo=req.get(indice).split(";");
-            if (splitiavo[0].equals("bases"))
-            {
-                this.getMyDataBase().afficherBases();
-            }
-            else if(splitiavo[0].equals("base"))
-            {
-                System.out.println(this.getBase().getName());
-            }
+            String baseName=request.get(request.indexOf("create")+2);
+            reponse=this.createBase(baseName);
         }
-        else if(req.indexOf("select")!=-1)
+        else if(request.indexOf("use")!=-1)
         {
-            this.select(req);
+            String baseName=request.get(request.indexOf("use")+1);
+            reponse=defineUsedBase(baseName);
         }
-        else if(req.indexOf("show")!=-1)
+        else if (request.indexOf("show")!=-1 && request.indexOf("databases")==(request.indexOf("show")+1))
         {
-            if(this.getBase()==null)
-            {
-                throw new SelectErrors("no base selected");
-            }
-            if(this.getBase().getTabs().size()==0)
-            {
-                throw new SelectErrors("no tables in base "+this.getBase().getName());
-            }
-            for(int i=0;i<this.getBase().getTabs().size();i++)
-            {
-                System.out.println((i+1)+"-"+this.getBase().getTabs().get(i).getName());
-            }
+            reponse=afficherBases();
         }
-        else if(req.indexOf("createBase")!=-1)
+        else if (request.indexOf("show")!=-1 && request.indexOf("tables")==(request.indexOf("show")+1))
         {
-            String nameBase=req.get(req.indexOf("createBase")+1);
-            this.getMyDataBase().addNewBase(new Base(nameBase));
+            reponse=afficherTables();
         }
-        else if(req.indexOf("add")!=-1)
+        else if(request.indexOf("create")!=-1 && request.indexOf("table")==(request.indexOf("create")+1))
         {
-            if(this.getBase()==null)
+            String tableName=request.get(request.indexOf("create")+2);
+            if(request.indexOf("(")!=-1 && request.indexOf(")")!=-1)
             {
-                throw new GrammarError("no Base selected");
+                Vector<String> colonnes=getNewColNames(request.get(request.indexOf("(")+1));
+                reponse=createTable(tableName,colonnes);
             }
-            String tabName=req.get((req.indexOf("add")+1));
-            if(this.getBase().isInBase(tabName)!=-1)
+            else
             {
-                throw new GrammarError("nom Table invalide");
+                reponse="No collumns defined";
             }
-
-            if(req.size()<4)
-            {
-                throw new GrammarError("table pas creee manque colonnne");
-            }
-
-            String cols=req.get((req.indexOf("add")+2));
-            Vector<String> vectCol=getNewColNames(cols);
-            this.getBase().addNewTab(new Tableau(tabName,vectCol));
         }
-        else if(req.indexOf("insert")!=-1)
-        {
-            this.insert(req);
-        }
-        else if(req.indexOf("update")!=-1)
-        {
-
-        }
-        else if(req.indexOf("save")!=-1)
+        else if(request.indexOf("save")!=-1)
         {
             this.getMyDataBase().getDossier().miseAjour(this.getMyDataBase());
-            System.out.println("donnees enregistres");
+            reponse="saved";
         }
-//        else if(req.indexOf("delete")!=-1)
-//        {
-//            String tabName=req.get((req.indexOf("delete")+1));
-//            if(req.indexOf("delete")!=-1)
-//            {}
-//        }
-
+        else if (request.indexOf("delete")!=-1 && request.indexOf("table")==request.indexOf("delete")+1)
+        {
+            String tabName=request.get(request.indexOf("delete")+2);
+            if(this.getBase().getTabByName(tabName)==null)
+            {
+                reponse="table doesn't exist";
+            }
+            else
+            {
+                this.getBase().getTabs().remove(this.getBase().isInBase(tabName));
+                reponse="table removed";
+            }
+        }
+        else if(request.indexOf("insert")!=-1)
+        {
+            reponse=insertSomething(requete);
+        } else if (request.indexOf("select")!=-1) {
+            reponse=selecting(requete);
+        }
+        else if(request.indexOf("update")!=-1) {
+            reponse=updateTable(requete);
+        }
+        else if (request.indexOf("delete")!=-1) {
+            reponse=deleteTable(requete);
+        } else
+        {
+            reponse="request not recognized";
+        }
+        return reponse;
+    }
+    public String deleteTable(String requete) throws SelectErrors, IOException {
+        String[] tab = requete.split(" ");
+        Vector<String> request = new Vector<>(List.of(tab));
+        String reponse;
+        String tabName=request.get(2);
+        if(this.getBase()==null)
+        {
+            reponse="No Base selected";
+        }
+        else
+        {
+            if(request.indexOf("where")==-1)
+            {
+                reponse= this.getBase().getTabByName(tabName).getDonnees().size()+"  rows deleted";
+                this.getBase().getTabByName(tabName).setDonnees(new Vector<Ligne>());
+            }
+            else
+            {
+                String conditions=request.get((request.indexOf("where")+1));
+                Vector<String> vectConditions=new Vector<String>(Arrays.asList(conditions.split(",")));
+                Vector<Condition> conditions2=new Vector<>();
+                for(int i=0;i<vectConditions.size();i++)
+                {
+                    conditions2.add(this.getCondition(vectConditions.get(i),this.getBase().getTabByName(tabName)));
+                }
+                Vector<Integer> listeEsorina=new Vector<>();
+                for (int j=0;j<this.getBase().getTabByName(tabName).getDonnees().size();j++)
+                {
+                    if(this.getBase().getTabByName(tabName).getDonnees().get(j).isOkay(conditions2)==true)
+                    {
+                        listeEsorina.add(j);
+                    }
+                }
+                for (int k=0;k<listeEsorina.size();k++)
+                {
+                    this.getBase().getTabByName(tabName).getDonnees().remove(this.getBase().getTabByName(tabName).getDonnees().get(listeEsorina.get(k)));
+                }
+                System.out.println(this.getBase().getTabByName(tabName).getDonnees().size()+" sisa ny ligne");
+                reponse=listeEsorina.size()+" rows deleted";
+            }
+        }
         this.getMyDataBase().getDossier().miseAjour(this.getMyDataBase());
+        return reponse;
+    }
+    public String updateTable(String requete) throws SelectErrors {
+        String[] tab = requete.split(" ");
+        Vector<String> request = new Vector<>(List.of(tab));
+        String reponse;
+        String tabName=request.get(1);
+        if(this.getBase()==null)
+        {
+            reponse="No Base selected";
+        }
+        else
+        {
+            if(this.getBase().isInBase(tabName)==-1)
+            {
+                reponse="Table doesn't exist";
+            }
+            else
+            {
+                String changement=request.get(request.indexOf("set")+1);
+                String condition=request.get(request.indexOf("where")+1);
+                String[] c = changement.split(",");
+                Vector<String> CList = new Vector<>(List.of(c));
+                Vector<Changement> changements=new Vector<>();
+                for (int i=0;i<CList.size();i++)
+                {
+                    changements.add(new Changement(CList.get(i)));
+                }
+                //
+                Vector<String> vectConditions=new Vector<String>(Arrays.asList(condition.split(",")));
+                Vector<Condition> conditions2=new Vector<>();
+                for(int i=0;i<vectConditions.size();i++)
+                {
+                    conditions2.add(this.getCondition(vectConditions.get(i),this.getBase().getTabByName(tabName)));
+                }
+                Vector<Integer> listeOvaina=new Vector<>();
+                for (int j=0;j<this.getBase().getTabByName(tabName).getDonnees().size();j++)
+                {
+                    if(this.getBase().getTabByName(tabName).getDonnees().get(j).isOkay(conditions2)==true)
+                    {
+                        listeOvaina.add(j);
+                    }
+                }
+                for (int k=0;k<listeOvaina.size();k++)
+                {
+                    this.getBase().getTabByName(tabName).getDonnees().get(listeOvaina.get(k)).changer(changements);
+                }
+                reponse=listeOvaina.size()+" rows changed";
+            }
+        }
+        return  reponse;
     }
 
-
-    public void update(Vector<String> req) throws GrammarError {
-        String tabName=req.get(1);
-        if(this.getBase().isInBase(tabName)==-1)
+    public String afficherTables()
+    {
+        String reponse;
+        if (this.getBase()==null)
         {
-            throw new GrammarError("Tableau inexistant");
+            reponse="no database selected";
         }
-        if(req.indexOf("where")==-1)
+        else
         {
-             
+            reponse="Tables\n";
+            for(int i=0;i<this.getBase().getTabs().size();i++)
+            {
+                reponse=reponse+this.getBase().getTabs().get(i).getName()+"\n";
+            }
         }
-
+        return reponse;
     }
 
+    public  String insertSomething(String requete)
+    {
+        String[] tab = requete.split(" ");
+        Vector<String> request = new Vector<>(List.of(tab));
+        String reponse;
+        if(this.getBase()==null)
+        {
+            reponse="no Base selected";
+        }
+        else
+        {
+            String tabName=request.get(2);
+            if(this.getBase().getTabByName(tabName)==null)
+            {
+                reponse="table "+tabName+" doesn't exist";
+            }
+            else
+            {
+                String donnees=request.get(3);
+                String[] l = donnees.split(",");
+                Vector<String> donnee = new Vector<>(List.of(l));
+                if(donnee.size()!=this.getBase().getTabByName(tabName).getAttribus().size())
+                {
+                    reponse="donnnes incomplets";
+                }
+                else
+                {
+                    this.getBase().getTabByName(tabName).addDonnee(new Ligne(donnee,this.getBase().getTabByName(tabName).getAttribus()));
+                    reponse="donnees inserees";
+                }
+            }
+        }
+        return  reponse;
+    }
+    public  String selecting(String requete)
+    {
+        String[] tab = requete.split(" ");
+        String reponse;
+        Vector<String> request = new Vector<>(List.of(tab));
+        try {
+            Tableau tableau=select(request);
+            tableau.afficherTab();
+            reponse=tableau.toString();
+        } catch (SelectErrors e) {
+            reponse=e.getMessage();
+        }
+        return reponse;
+    }
 
+    public Tableau select(Vector<String> req) throws SelectErrors {
+        String colonnes=req.get(1);
+        String tabName=req.get(3);
+        Tableau tabFinal=new Tableau();
+        if (this.getBase()==null)
+        {
+            throw new SelectErrors("aucune base selectionnee");
+        }
+        int indice=this.getBase().isInBase(tabName);
 
-
+        if(indice==-1)
+        {
+            throw new SelectErrors("tableau pas dans la base");
+        }
+        Vector<String> colVect=new Vector<>(Arrays.asList(colonnes.split(",")));
+        if(colVect.size()==1 && colVect.get(0).equals("*"))
+        {
+            //System.out.println("tato eee");
+//            this.getBase().getTabs().get(indice).afficherTab();
+            tabFinal=this.getBase().getTabs().get(indice);
+        }
+        else
+        {
+            //System.out.println("tato koa izy aaan");
+            if(this.getBase().getTabs().get(indice).isColNamesOK(colVect)==false){
+                throw  new SelectErrors("colonnes invalides");
+            }
+            Tableau tableau=this.getBase().getTabs().get(indice).projection(colVect);
+            tabFinal=tableau;
+            //tableau.afficherTab();
+        }
+        if(req.indexOf("jointure")!=-1)
+        {
+            tabFinal=this.jouinture(req);
+            //tabFinal.afficherTab();
+        }
+        else if(req.indexOf("where")!=-1)
+        {
+            String conditions=req.get((req.indexOf("where")+1));
+            Vector<String> vectConditions=new Vector<String>(Arrays.asList(conditions.split(",")));
+            Vector<Condition> conditions2=new Vector<>();
+            for(int i=0;i<vectConditions.size();i++)
+            {
+                conditions2.add(this.getCondition(vectConditions.get(i),tabFinal));
+            }
+            tabFinal=selections(conditions2,tabFinal);
+        }
+        if(req.indexOf("union")!=-1)
+        {
+            String tab2Name=req.get((req.indexOf("union")+1));
+            int indiceTab2=this.getBase().isInBase(tab2Name);
+            if(indiceTab2==-1)
+            {
+                throw new SelectErrors(tab2Name+"  non existant ");
+            }
+            tabFinal=tabFinal.union(this.getBase().getTabs().get(indiceTab2));
+        }
+        else if(req.indexOf("dif")!=-1)
+        {
+            String tab2Name=req.get((req.indexOf("dif")+1));
+            int indiceTab2=this.getBase().isInBase(tab2Name);
+            if(indiceTab2==-1)
+            {
+                throw new SelectErrors(tab2Name+"  non existant ");
+            }
+            tabFinal=tabFinal.difference(this.getBase().getTabs().get(indiceTab2));
+        }
+        else if(req.indexOf("produit")!=-1)
+        {
+            String tab2Name=req.get((req.indexOf("produit")+1));
+            int indiceTab2=this.getBase().isInBase(tab2Name);
+            if(indiceTab2==-1)
+            {
+                throw new SelectErrors(tab2Name+"  non existant ");
+            }
+            tabFinal=tabFinal.produit(this.getBase().getTabs().get(indiceTab2));
+        }
+        else if(req.indexOf("division")!=-1)
+        {
+            String tab2Name=req.get((req.indexOf("division")+1));
+            int indiceTab2=this.getBase().isInBase(tab2Name);
+            if(indiceTab2==-1)
+            {
+                throw new SelectErrors(tab2Name+"  non existant ");
+            }
+            tabFinal=tabFinal.division(this.getBase().getTabs().get(indiceTab2));
+        }
+//        tabFinal.afficherTab();
+        return tabFinal;
+    }
     public Vector<String> getNewColNames(String req)
     {
         return new Vector<>(Arrays.asList(req.split(",")));
     }
+
+    public String createTable(String tabName,Vector<String> colonnes)
+    {
+        String reponse;
+        if(this.getBase()==null)
+        {
+            reponse="No base selected";
+        }
+        else
+        {
+            this.getBase().addNewTab(new Tableau(tabName,colonnes));
+            reponse="table "+tabName+" added to "+this.getBase().getName();
+        }
+        return reponse;
+    }
+
+    public String afficherBases()
+    {
+        String reponse="Bases : \n";
+        for(int i=0;i<this.getMyDataBase().getBases().size();i++)
+        {
+            reponse=reponse+" "+this.getMyDataBase().getBases().get(i).getName()+"\n";
+        }
+        return reponse;
+    }
+    public  String createBase(String baseName)
+    {
+        String reponse;
+        if(this.getMyDataBase().isValidName(baseName))
+        {
+            this.getMyDataBase().addNewBase(new Base(baseName));
+            reponse="Base "+baseName+" created";
+        }
+        else
+        {
+            reponse="Name "+baseName+"invalid";
+        }
+        return reponse;
+    }
+    public String defineUsedBase(String baseName)
+    {
+        String reponse;
+        if(this.getMyDataBase().getBaseByName(baseName)!=null)
+        {
+            this.setBase(this.getMyDataBase().getBaseByName(baseName));
+            reponse="Base used: "+baseName;
+        }
+        else
+        {
+            reponse="base "+baseName+" does not exist";
+        }
+        return reponse;
+    }
+
+
+
+
+
+
 
     public Condition getCondition(String req,Tableau tableau) throws SelectErrors {
         String[] sub=req.split("'");
@@ -158,23 +425,6 @@ public class Query implements Serializable {
     }
 
 
-    public void insert(Vector<String> req) throws GrammarError, InsertErrors {
-        String tabName=req.get(1);
-        int indiceTab=this.getBase().isInBase(tabName);
-        Vector<String> donneees=getNewColNames(req.get(2));
-        if(donneees.size()>this.getBase().getTabs().get(indiceTab).getAttribus().size() || donneees.size()<this.getBase().getTabs().get(indiceTab).getAttribus().size())
-        {
-            throw new GrammarError("Donnes invalides");
-        }
-        Ligne temp=new Ligne(donneees,this.getBase().getTabs().get(indiceTab).getAttribus());
-        if(this.getBase().getTabs().get(indiceTab).isInTable(this.getBase().getTabs().get(indiceTab).getDonnees(),temp))
-        {
-            throw new InsertErrors("donnees invalides");
-        }
-        this.getBase().getTabs().get(indiceTab).addDonnee(temp);
-        System.out.println("Donnees inserees");
-    }
-
 
 
     public Tableau selection(Condition conditions,Tableau tab) throws SelectErrors {
@@ -185,7 +435,6 @@ public class Query implements Serializable {
             if(conditions.isOkey(tab.getDonnees().get(i),numColonne))
             {
                 relation.addDonnee(tab.getDonnees().get(i));
-                System.out.println("nisy iray ");
             }
         }
         return relation;
@@ -240,107 +489,7 @@ public class Query implements Serializable {
 
 
 
-    public void select(Vector<String> req) throws SelectErrors {
-        /* to do
-            -jointure
-        * */
-        String colonnes=req.get(1);
-        String tabName=req.get(3);
-        Tableau tabFinal=new Tableau();
-        if (this.getBase()==null)
-        {
-            throw new SelectErrors("aucune base selectionnee");
-        }
-        int indice=this.getBase().isInBase(tabName);
 
-        if(indice==-1)
-        {
-            throw new SelectErrors("tableau pas dans la base");
-        }
-        Vector<String> colVect=new Vector<>(Arrays.asList(colonnes.split(",")));
-        if(colVect.size()==1 && colVect.get(0).equals("*"))
-        {
-            //System.out.println("tato eee");
-//            this.getBase().getTabs().get(indice).afficherTab();
-            tabFinal=this.getBase().getTabs().get(indice);
-        }
-        else
-        {
-            //System.out.println("tato koa izy aaan");
-            if(this.getBase().getTabs().get(indice).isColNamesOK(colVect)==false){
-                throw  new SelectErrors("colonnes invalides");
-            }
-            Tableau tableau=this.getBase().getTabs().get(indice).projection(colVect);
-            tabFinal=tableau;
-            //tableau.afficherTab();
-        }
-        if(req.indexOf("jointure")!=-1)
-        {
-            System.out.println("nandalo jointure");
-            tabFinal=this.jouinture(req);
-            //tabFinal.afficherTab();
-        }
-        else if(req.indexOf("where")!=-1)
-        {
-            //System.out.println("tato @ conditions izy"+ req.indexOf("where"));
-            String conditions=req.get((req.indexOf("where")+1));
-            Vector<String> vectConditions=new Vector<String>(Arrays.asList(conditions.split(",")));
-            for (int i=0;i<vectConditions.size();i++)
-            {
-                //System.out.println(vectConditions.get(i)+"   condition");
-            }
-            Vector<Condition> conditions2=new Vector<>();
-            for(int i=0;i<vectConditions.size();i++)
-            {
-                conditions2.add(this.getCondition(vectConditions.get(i),tabFinal));
-            }
-            tabFinal=selections(conditions2,tabFinal);
-        }
-        if(req.indexOf("union")!=-1)
-        {
-            String tab2Name=req.get((req.indexOf("union")+1));
-            int indiceTab2=this.getBase().isInBase(tab2Name);
-            if(indiceTab2==-1)
-            {
-                throw new SelectErrors(tab2Name+"  non existant ");
-            }
-            tabFinal=tabFinal.union(this.getBase().getTabs().get(indiceTab2));
-        }
-        else if(req.indexOf("dif")!=-1)
-        {
-            System.out.println("tato izy");
-            String tab2Name=req.get((req.indexOf("dif")+1));
-            int indiceTab2=this.getBase().isInBase(tab2Name);
-            if(indiceTab2==-1)
-            {
-                throw new SelectErrors(tab2Name+"  non existant ");
-            }
-            tabFinal=tabFinal.difference(this.getBase().getTabs().get(indiceTab2));
-        }
-        else if(req.indexOf("produit")!=-1)
-        {
-            System.out.println("tato izy");
-            String tab2Name=req.get((req.indexOf("produit")+1));
-            int indiceTab2=this.getBase().isInBase(tab2Name);
-            if(indiceTab2==-1)
-            {
-                throw new SelectErrors(tab2Name+"  non existant ");
-            }
-            tabFinal=tabFinal.produit(this.getBase().getTabs().get(indiceTab2));
-        }
-        else if(req.indexOf("division")!=-1)
-        {
-            System.out.println("tato izy");
-            String tab2Name=req.get((req.indexOf("division")+1));
-            int indiceTab2=this.getBase().isInBase(tab2Name);
-            if(indiceTab2==-1)
-            {
-                throw new SelectErrors(tab2Name+"  non existant ");
-            }
-            tabFinal=tabFinal.division(this.getBase().getTabs().get(indiceTab2));
-        }
-        tabFinal.afficherTab();
-    }
 
     //jointure
 

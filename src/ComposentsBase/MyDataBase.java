@@ -16,6 +16,18 @@ public class MyDataBase implements Serializable {
         this.setDossier(new Dossier("archives",this));
     }
 
+    public boolean isValidName(String name)
+    {
+        for(int i=0;i<this.getBases().size();i++)
+        {
+            if(this.getBases().get(i).getName().equals(name))
+            {
+                return  false;
+            }
+        }
+        return true;
+    }
+
     public void addNewBase(Base base)
     {
         this.getBases().add(base);
@@ -40,7 +52,7 @@ public class MyDataBase implements Serializable {
         {
             throw new GrammarError("aucune base cree");
         }
-        System.out.println("Bases:");
+        //System.out.println("Bases:");
         for(int i=0;i<this.getBases().size();i++)
         {
             System.out.println(this.getBases().get(i).getName());

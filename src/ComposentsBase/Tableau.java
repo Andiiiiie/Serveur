@@ -20,6 +20,25 @@ public class Tableau implements Serializable {
         this.setDonnees(new Vector<Ligne>());
     }
 
+    public String toString()
+    {
+        String reponse=this.getName()+"\n";
+        for (int i=0;i<this.getAttribus().size();i++)
+        {
+            reponse=reponse+this.getAttribus().get(i)+"\t";
+        }
+        reponse=reponse+"\n";
+        for (int j=0;j<this.getDonnees().size();j++)
+        {
+            for (int k=0;k<this.getAttribus().size();k++)
+            {
+               reponse=reponse+this.getDonnees().get(j).getDonnees().get(k)+"\t";
+            }
+            reponse=reponse+"\n";
+        }
+        reponse=reponse+"nombre de ligne:"+this.getDonnees().size()+"\n";
+        return reponse;
+    }
     public void addDonnee(Ligne ligne)
     {
         this.getDonnees().add(ligne);
