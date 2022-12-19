@@ -6,8 +6,10 @@ import Requete.Query;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Vector;
 
 public class Serveur {
+    int nombreClient;
 
 
     ServerSocket serverSocket;
@@ -19,6 +21,7 @@ public class Serveur {
     public Serveur(int port, MyDataBase myDataBase) throws IOException {
         this.setMyDataBase(myDataBase);
         this.setServerSocket(new ServerSocket(port));
+        this.setNombreClient(0);
         miandry();
 
     }
@@ -27,10 +30,14 @@ public class Serveur {
         while (true)
         {
             this.setSocket(this.getServerSocket().accept());
-            ThreadClient threadClient=new ThreadClient(this.getSocket(),this.getMyDataBase());
+            this.setNombreClient(this.getNombreClient()+1);
+            System.out.println("Un client accepte("+this.getNombreClient()+")");
+            ThreadClient threadClient=new ThreadClient(this.getSocket(),this.getMyDataBase(),this);
             threadClient.start();
         }
     }
+
+
 
 
 
@@ -58,5 +65,12 @@ public class Serveur {
 
     public void setMyDataBase(MyDataBase myDataBase) {
         this.myDataBase = myDataBase;
+    }
+    public int getNombreClient() {
+        return nombreClient;
+    }
+
+    public void setNombreClient(int nombreClient) {
+        this.nombreClient = nombreClient;
     }
 }

@@ -63,11 +63,6 @@ public class Query implements Serializable {
                 reponse="No collumns defined";
             }
         }
-        else if(request.indexOf("save")!=-1)
-        {
-            this.getMyDataBase().getDossier().miseAjour(this.getMyDataBase());
-            reponse="saved";
-        }
         else if (request.indexOf("delete")!=-1 && request.indexOf("table")==request.indexOf("delete")+1)
         {
             String tabName=request.get(request.indexOf("delete")+2);
@@ -96,6 +91,7 @@ public class Query implements Serializable {
         {
             reponse="request not recognized";
         }
+        this.getMyDataBase().getDossier().miseAjour(this.getMyDataBase());
         return reponse;
     }
     public String deleteTable(String requete) throws SelectErrors, IOException {
@@ -135,7 +131,6 @@ public class Query implements Serializable {
                 {
                     this.getBase().getTabByName(tabName).getDonnees().remove(this.getBase().getTabByName(tabName).getDonnees().get(listeEsorina.get(k)));
                 }
-                System.out.println(this.getBase().getTabByName(tabName).getDonnees().size()+" sisa ny ligne");
                 reponse=listeEsorina.size()+" rows deleted";
             }
         }
@@ -252,7 +247,6 @@ public class Query implements Serializable {
         Vector<String> request = new Vector<>(List.of(tab));
         try {
             Tableau tableau=select(request);
-            tableau.afficherTab();
             reponse=tableau.toString();
         } catch (SelectErrors e) {
             reponse=e.getMessage();
@@ -277,24 +271,21 @@ public class Query implements Serializable {
         Vector<String> colVect=new Vector<>(Arrays.asList(colonnes.split(",")));
         if(colVect.size()==1 && colVect.get(0).equals("*"))
         {
-            //System.out.println("tato eee");
-//            this.getBase().getTabs().get(indice).afficherTab();
             tabFinal=this.getBase().getTabs().get(indice);
         }
         else
         {
-            //System.out.println("tato koa izy aaan");
             if(this.getBase().getTabs().get(indice).isColNamesOK(colVect)==false){
                 throw  new SelectErrors("colonnes invalides");
             }
             Tableau tableau=this.getBase().getTabs().get(indice).projection(colVect);
             tabFinal=tableau;
-            //tableau.afficherTab();
+
         }
         if(req.indexOf("jointure")!=-1)
         {
             tabFinal=this.jouinture(req);
-            //tabFinal.afficherTab();
+
         }
         else if(req.indexOf("where")!=-1)
         {
@@ -451,7 +442,6 @@ public class Query implements Serializable {
             liste.add(temp);
         }
         relation=liste.get(0);
-        //System.out.println(relation.getDonnees().size()+"  lignes");
         for(int j=1;j<liste.size();j++) {
             relation = relation.intersection(liste.get(j));
         }
@@ -534,6 +524,5 @@ public class Query implements Serializable {
 
     public void setBase(Base base) {
         this.base = base;
-        System.out.println("niova ny base: "+this.getBase().getName());
     }
 }

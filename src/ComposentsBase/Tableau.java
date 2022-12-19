@@ -73,7 +73,6 @@ public class Tableau implements Serializable {
             }
             else
             {
-                System.out.println("tato");
                 return false;
             }
 
@@ -129,7 +128,6 @@ public class Tableau implements Serializable {
 
     public Tableau projection(Vector<String> collones)
     {
-        System.out.println("niditra projection ");
         Tableau tableau=new Tableau("projection",collones);
         Ligne temp;
         int indice;
@@ -205,17 +203,12 @@ public class Tableau implements Serializable {
     public Tableau produitJouinture(Tableau tab2,String col1,String col2)
     {
         Tableau relation=new Tableau("produit",this.combinerAttributs(tab2));
-        for(int j=0;j<relation.getAttribus().size();j++)
-        {
-            System.out.println(relation.getAttribus().get(j));
-        }
         for (int i=0;i<this.getDonnees().size();i++)
         {
             for (int j=0;j<tab2.getDonnees().size();j++)
             {
                 if(this.getColByName(col1,i).equals(tab2.getColByName(col2,j)))
                 {
-//                    System.out.println("hellooo correspondance");
                     relation.addDonnee(this.getDonnees().get(i).fusionnerLigne(tab2.getDonnees().get(j)));
                 }
             }
@@ -248,24 +241,7 @@ public class Tableau implements Serializable {
         Tableau relation5=relation1.difference(relation4);
         return relation5;
     }
-    public void afficherTab()
-    {
-        System.out.println("tableau : "+this.getName());
-        for(int i=0;i<this.getAttribus().size();i++)
-        {
-            System.out.print(this.getAttribus().get(i)+"\t");
-        }
-        System.out.println();
-        for (int j=0;j<this.getDonnees().size();j++)
-        {
-            for(int k=0;k<this.getAttribus().size();k++)
-            {
-                System.out.print(this.getDonnees().get(j).getDonnees().get(k)+"\t");
-            }
-            System.out.println();
-        }
 
-    }
 
 
 
