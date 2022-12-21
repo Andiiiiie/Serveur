@@ -1,4 +1,6 @@
-# Serveur
+#SGBD:ETU 001938 ANDRIANARIVELO Jessica Andie<br>
+Lien video:https://drive.google.com/file/d/13p-CQ5r4uS8VDG17zVDypb8K5peJLrpN/view?usp=sharing<br>
+Lien client:https://github.com/Andiiiiie/Client.git<br>
 SGBD-Requetes qui marchent<br>
   - creer une base : create database baseName
   - utiliser une base : use baseName
